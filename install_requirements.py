@@ -13,4 +13,4 @@ if __name__ == '__main__':
     if environ.get('CUDA_PATH_V11_8') is not None:
         requirements = join(dir, 'requirements', 'cu118.txt')
 
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', realpath(requirements)])
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--user', '-r', realpath(requirements)])
