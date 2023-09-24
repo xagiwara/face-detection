@@ -1,7 +1,9 @@
 *.pth
 *.ipynb
 *.npy
+*.pkl
 
 blazeface/*.png
+hopenet/*.gif
 
 .env

@@ -1,5 +1,6 @@
 from .app import app
 from fastapi import UploadFile, Query
+from fastapi.responses import JSONResponse, Response
 import numpy as np
 import cv2
 from blazeface.blazeface import BlazeFace
@@ -8,6 +9,8 @@ from env import DATA_BLAZEFACE
 from os.path import join
 from device import cudaDevice
 from time import perf_counter
+from math import floor, ceil
+from cv2.typing import MatLike
 
 model_cached: dict[str, BlazeFace] = {}
 
@@ -31,16 +34,9 @@ def load_model(model: str, device: str):
     model_cached[key] = blazeface
     return blazeface
 
-@app.post('/blazeface/prepare')
-async def blazeface (cuda: Optional[int] = None, model: str = Query('front', enum=['front', 'back'])):
-    start = perf_counter()
-    load_model(model, cudaDevice(cuda))
-    return {
-        'duration': perf_counter() - start,
-    }
 
 @app.post('/blazeface')
-async def blazeface (file: UploadFile, cuda: Optional[int] = None, model: str = Query('front', enum=['front', 'back'])):
+async def blazeface_process (file: UploadFile, cuda: Optional[int] = None, model: str = Query('front', enum=['front', 'back'])):
     cuda = cudaDevice(cuda)
     front_net = load_model(model, cuda)
 
@@ -83,3 +79,68 @@ async def blazeface (file: UploadFile, cuda: Optional[int] = None, model: str = 
             in front_detections
         ]
     }
+
+@app.post('/blazeface/prepare')
+async def blazeface_prepare (cuda: Optional[int] = None, model: str = Query('front', enum=['front', 'back'])):
+    start = perf_counter()
+    load_model(model, cudaDevice(cuda))
+    return {
+        'duration': perf_counter() - start,
+    }
+
+@app.post('/blazeface/crop')
+async def blazeface_crop (file: UploadFile, cuda: Optional[int] = None, model: str = Query('front', enum=['front', 'back'])):
+    cuda = cudaDevice(cuda)
+    front_net = load_model(model, cuda)
+
+    buffer = await file.read()
+    img_orig = cv2.imdecode(np.frombuffer(buffer, dtype=np.uint8), flags=cv2.IMREAD_COLOR)
+    height, width = img_orig.shape[:2]
+    size = max(height, width)
+    top = int((size - height) / 2)
+    left = int((size - width) / 2)
+
+    img_padded = cv2.copyMakeBorder(img_orig, top, size - height - top, left, size - width - left, cv2.BORDER_CONSTANT, (0, 0, 0))
+    img = cv2.cvtColor(img_padded, cv2.COLOR_BGR2RGB)
+
+    if model == 'front':
+        img = cv2.resize(img, (128, 128))
+
+    if model == 'back':
+        img = cv2.resize(img, (256, 256))
+
+    # front_net.min_score_thresh = 0.75
+    # front_net.min_suppression_threshold = 0.3
+
+    front_detections = front_net.predict_on_image(img)
+    front_detections = front_detections.cpu().numpy()
+
+    if len(front_detections) < 1:
+        return JSONResponse('', 204)
+
+    face = front_detections[0]
+    face_top = floor(face[0] * size - top)
+    face_left = floor(face[1] * size - left)
+    face_bottom = ceil(face[2] * size - top)
+    face_right = ceil(face[3] * size - left)
+
+    if face_bottom > size or face_right > size:
+        img_padded = cv2.copyMakeBorder(img_padded, 0, max(face_bottom - size, 0), 0, max(face_right - size, 0), cv2.BORDER_CONSTANT, (0, 0, 0))
+
+    if face_top < 0:
+        img_padded = cv2.copyMakeBorder(img_padded, -face_top, 0, 0, 0, cv2.BORDER_CONSTANT, (0, 0, 0))
+        face_top = 0
+        face_bottom += -face_top
+
+    if face_left < 0:
+        img_padded = cv2.copyMakeBorder(img_padded, 0, 0, -face_left, 0, cv2.BORDER_CONSTANT, (0, 0, 0))
+        face_left = 0
+        face_right += -face_left
+
+    img_padded = img_padded[face_top:face_bottom,face_left:face_right]
+
+    _, image = cv2.imencode('.png', img_padded)
+
+    return Response(image.tobytes(), 200, None, 'image/png')
+
+__all__ = []

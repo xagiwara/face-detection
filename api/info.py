@@ -30,3 +30,5 @@ async def cuda_device(device: int):
 @app.get('/devices/cuda')
 async def cuda_devices():
     return [await cuda_device(i) for i in range(cuda.device_count())]
+
+__all__ = []

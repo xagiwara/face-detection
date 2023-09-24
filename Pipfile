@@ -12,10 +12,12 @@ name = "torch"
 uvicorn = "*"
 numpy = "*"
 torch = {version = "*", index = "torch" }
+torchvision = {version = "*", index = "torch" }
 fastapi = "*"
 websockets = "==11.0.2"
 python-multipart = "*"
 opencv-python = "*"
+pillow = "*"
 
 [dev-packages]
 
