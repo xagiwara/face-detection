@@ -1,6 +1,5 @@
 from os import listdir, path
 from os.path import isfile
-from typing import Optional
 from fastapi import UploadFile, Query
 from torchvision import transforms
 from torchvision.models.resnet import Bottleneck
@@ -13,7 +12,7 @@ from PIL import Image
 from hopenet.code.hopenet import Hopenet
 from .app import app
 from env import DATA_HOPENET
-from device import cudaDevice
+from .devices import cuda_devices
 
 model_cached: dict[str, Hopenet] = {}
 
@@ -38,10 +37,8 @@ def hopenet_models ():
     return [f for f in listdir(DATA_HOPENET) if isfile(path.join(DATA_HOPENET, f)) and path.splitext(f)[1] == '.pkl']
 
 @app.post('/hopenet')
-async def hopenet_process (file: UploadFile, model: str = Query(hopenet_models()[0], enum=hopenet_models()), cuda: Optional[int] = None):
+async def hopenet_process (file: UploadFile, model: str = Query(hopenet_models()[0], enum=hopenet_models()), cuda: str = Query('cpu', enum=cuda_devices())):
     model = model or [f for f in listdir(DATA_HOPENET) if isfile(path.join(DATA_HOPENET, f)) and path.splitext(f)[1] == '.pkl'][0]
-    cuda = cudaDevice(cuda)
-
     model = load_model(model, cuda)
 
     idx_tensor = [idx for idx in range(66)]

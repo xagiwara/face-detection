@@ -11,17 +11,16 @@ from PIL import Image
 from .app import app
 from .hopenet import hopenet_models, load_model as load_hopenet_model
 from .blazeface import load_model as load_blazeface_model
-from device import cudaDevice
+from .devices import cuda_devices
 
 @app.post('/')
 async def all(
-    file: UploadFile,
-    cuda: Optional[int] = None,
-    blazeface_model: str = Query('front', enum=['front', 'back']),
-    hopenet_model: str = Query(hopenet_models()[0], enum=hopenet_models()),
-    face_limit: Optional[int] = None):
+        file: UploadFile,
+        cuda: str = Query('cpu', enum=cuda_devices()),
+        blazeface_model: str = Query('front', enum=['front', 'back']),
+        hopenet_model: str = Query(hopenet_models()[0], enum=hopenet_models()),
+        face_limit: Optional[int] = None):
 
-    cuda = cudaDevice(cuda)
     blazeface = load_blazeface_model(blazeface_model, cuda)
     hopenet = load_hopenet_model(hopenet_model, cuda)
 

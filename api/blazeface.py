@@ -4,13 +4,11 @@ from fastapi.responses import JSONResponse, Response
 import numpy as np
 import cv2
 from blazeface.blazeface import BlazeFace
-from typing import Optional
 from env import DATA_BLAZEFACE
 from os.path import join
-from device import cudaDevice
 from time import perf_counter
 from math import floor, ceil
-from cv2.typing import MatLike
+from .devices import cuda_devices
 
 model_cached: dict[str, BlazeFace] = {}
 
@@ -36,8 +34,7 @@ def load_model(model: str, device: str):
 
 
 @app.post('/blazeface')
-async def blazeface_process (file: UploadFile, cuda: Optional[int] = None, model: str = Query('front', enum=['front', 'back'])):
-    cuda = cudaDevice(cuda)
+async def blazeface_process (file: UploadFile, cuda: str = Query('cpu', enum=cuda_devices()), model: str = Query('front', enum=['front', 'back'])):
     front_net = load_model(model, cuda)
 
     buffer = await file.read()
@@ -81,16 +78,15 @@ async def blazeface_process (file: UploadFile, cuda: Optional[int] = None, model
     }
 
 @app.post('/blazeface/prepare')
-async def blazeface_prepare (cuda: Optional[int] = None, model: str = Query('front', enum=['front', 'back'])):
+async def blazeface_prepare (cuda: str = Query('cpu', enum=cuda_devices()), model: str = Query('front', enum=['front', 'back'])):
     start = perf_counter()
-    load_model(model, cudaDevice(cuda))
+    load_model(model, cuda)
     return {
         'duration': perf_counter() - start,
     }
 
 @app.post('/blazeface/crop')
-async def blazeface_crop (file: UploadFile, cuda: Optional[int] = None, model: str = Query('front', enum=['front', 'back'])):
-    cuda = cudaDevice(cuda)
+async def blazeface_crop (file: UploadFile, cuda: str = Query('cpu', enum=cuda_devices()), model: str = Query('front', enum=['front', 'back'])):
     front_net = load_model(model, cuda)
 
     buffer = await file.read()
