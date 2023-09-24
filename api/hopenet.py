@@ -1,5 +1,6 @@
 from os import listdir, path
 from os.path import isfile
+from time import perf_counter
 from fastapi import UploadFile, Query
 from torchvision import transforms
 from torchvision.models.resnet import Bottleneck
@@ -72,6 +73,14 @@ async def hopenet_process (file: UploadFile, model: str = Query(hopenet_models()
         'roll': roll_predicted,
         'pitch': pitch_predicted,
         'yaw': yaw_predicted,
+    }
+
+@app.post('/hopenet/prepare')
+async def hopenet_prepare (cuda: str = Query('cpu', enum=cuda_devices()), model: str = Query(hopenet_models()[0], enum=hopenet_models())):
+    start = perf_counter()
+    load_model(model, cuda)
+    return {
+        'duration': perf_counter() - start,
     }
 
 __all__ = []
