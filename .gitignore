@@ -5,5 +5,8 @@
 
 blazeface/*.png
 hopenet/*.gif
+hsemotion/**/*.jpg
 
 .env
+
+/var

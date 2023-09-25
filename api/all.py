@@ -11,7 +11,16 @@ from PIL import Image
 from .app import app
 from .hopenet import hopenet_models, load_model as load_hopenet_model
 from .blazeface import load_model as load_blazeface_model
+from .hsemotion import hsemotion_models, hsemotion
 from .devices import cuda_devices
+
+@app.post('/models')
+async def models():
+    return {
+        'blazeface': ['front', 'back'],
+        'hopenet': hopenet_models(),
+        'hsemotion': hsemotion_models(),
+    }
 
 @app.post('/')
 async def all(
@@ -19,6 +28,7 @@ async def all(
         cuda: str = Query('cpu', enum=cuda_devices()),
         blazeface_model: str = Query('front', enum=['front', 'back']),
         hopenet_model: str = Query(hopenet_models()[0], enum=hopenet_models()),
+        hsemotion_model: Optional[str] = Query(None, enum=hsemotion_models()),
         face_limit: Optional[int] = None):
 
     blazeface = load_blazeface_model(blazeface_model, cuda)
@@ -31,13 +41,13 @@ async def all(
     size = max(height, width)
     top = int((size - height) / 2)
     left = int((size - width) / 2)
-    img = cv2.copyMakeBorder(img, top, size - height - top, left, size - width - left, cv2.BORDER_CONSTANT, (0, 0, 0))
+    img_padded = cv2.copyMakeBorder(img, top, size - height - top, left, size - width - left, cv2.BORDER_CONSTANT, (0, 0, 0))
 
     if blazeface_model == 'front':
-        img_blazeface = cv2.resize(img, (128, 128))
+        img_blazeface = cv2.resize(img_padded, (128, 128))
 
     if blazeface_model == 'back':
-        img_blazeface = cv2.resize(img, (256, 256))
+        img_blazeface = cv2.resize(img_padded, (256, 256))
 
     detections = blazeface.predict_on_image(img_blazeface)
     detections = detections.cpu().numpy()
@@ -70,30 +80,37 @@ async def all(
     transformations = transforms.Compose([transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
 
-
-    hopenet_results = []
-    for face in faces:
+    def _crop_face (face):
         face_top = floor(face['top'])
         face_left = floor(face['left'])
         face_bottom = ceil(face['bottom'])
         face_right = ceil(face['right'])
 
-        img_hopenet = img
+        img_cropped = img
 
         if face_bottom > size or face_right > size:
-            img_hopenet = cv2.copyMakeBorder(img_hopenet, 0, max(face_bottom - size, 0), 0, max(face_right - size, 0), cv2.BORDER_CONSTANT, (0, 0, 0))
+            img_cropped = cv2.copyMakeBorder(img_cropped, 0, max(face_bottom - size, 0), 0, max(face_right - size, 0), cv2.BORDER_CONSTANT, (0, 0, 0))
 
         if face_top < 0:
-            img_hopenet = cv2.copyMakeBorder(img_hopenet, -face_top, 0, 0, 0, cv2.BORDER_CONSTANT, (0, 0, 0))
+            img_cropped = cv2.copyMakeBorder(img_cropped, -face_top, 0, 0, 0, cv2.BORDER_CONSTANT, (0, 0, 0))
             face_top = 0
             face_bottom += -face_top
 
         if face_left < 0:
-            img_hopenet = cv2.copyMakeBorder(img_hopenet, 0, 0, -face_left, 0, cv2.BORDER_CONSTANT, (0, 0, 0))
+            img_cropped = cv2.copyMakeBorder(img_cropped, 0, 0, -face_left, 0, cv2.BORDER_CONSTANT, (0, 0, 0))
             face_left = 0
             face_right += -face_left
 
-        img_hopenet = img_hopenet[face_top:face_bottom,face_left:face_right]
+        return img_cropped[face_top:face_bottom,face_left:face_right]
+
+    cropped_imgs = [_crop_face(face) for face in faces]
+
+    hsemotion_results = None
+    if hsemotion_model is not None:
+        hsemotion_results = hsemotion(cropped_imgs, hsemotion_model, cuda)
+
+    hopenet_results = []
+    for img_hopenet in cropped_imgs:
         img_hopenet = cv2.resize(img_hopenet, (224, 224))
         img_hopenet = Image.fromarray(img_hopenet)
 
@@ -117,13 +134,15 @@ async def all(
             'yaw': yaw_predicted,
         }]
 
-    return [
-        {
+    def _item (i: int):
+        data = {
             'blazeface': faces[i],
             'hopenet': hopenet_results[i],
         }
-        for i in range(len(faces))
-    ]
+        if hsemotion_results is not None:
+            data['hsemotion'] = hsemotion_results[i]
+        return data
 
+    return [_item(i) for i in range(len(faces))]
 
 __all__ = []
