@@ -3,7 +3,7 @@ from fastapi import UploadFile, Query
 from fastapi.responses import JSONResponse, Response
 import numpy as np
 import cv2
-from blazeface.blazeface import BlazeFace
+from lib.blazeface.blazeface import BlazeFace
 from env import DATA_BLAZEFACE
 from os.path import join
 from time import perf_counter

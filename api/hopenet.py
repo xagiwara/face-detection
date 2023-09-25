@@ -10,7 +10,7 @@ from torch.autograd import Variable
 import cv2
 import numpy as np
 from PIL import Image
-from hopenet.code.hopenet import Hopenet
+from lib.hopenet.code.hopenet import Hopenet
 from .app import app
 from env import DATA_HOPENET
 from .devices import cuda_devices

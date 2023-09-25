@@ -2,11 +2,10 @@
 *.ipynb
 *.npy
 *.pkl
+*.pt
 
-blazeface/*.png
-hopenet/*.gif
-hsemotion/**/*.jpg
+lib/blazeface/*.png
+lib/hopenet/*.gif
+lib/hsemotion/**/*.jpg
 
 .env
-
-/var
