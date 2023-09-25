@@ -9,7 +9,7 @@ from models.hsemotion import hsemotion, models as hsemotion_models
 from .devices import cuda_devices
 
 
-@app.post("/models")
+@app.get("/models")
 async def models():
     return {
         "blazeface": blazeface_models(),
