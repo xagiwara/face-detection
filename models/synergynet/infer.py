@@ -31,18 +31,16 @@ class SynergyNetResult:
     ) -> None:
         if landmaraks:
             data = predict_sparseVert(param, roi_box=roi_box, transform=True)
-            self.landmarks = [[data[1][i], data[0][i], data[2][i]] for i in range(68)]
+            self.landmarks = [[data[0][i], data[1][i], data[2][i]] for i in range(68)]
 
         if vertices:
             data = predict_denseVert(param, roi_box=roi_box, transform=True)
-            self.landmarks = [
-                [data[1][i], data[0][i], data[2][i]] for i in range(53215)
-            ]
+            self.vertices = [[data[0][i], data[1][i], data[2][i]] for i in range(53215)]
 
         if pose:
             angle, translation = predict_pose(param, roi_box)
             self.angle = EulerAngle(angle[2], angle[1], angle[0])
-            self.translation = [translation[1], translation[0], translation[2]]
+            self.translation = [translation[0], translation[1], translation[2]]
 
 
 class SynergyNetWrapper:
@@ -65,7 +63,8 @@ class SynergyNetWrapper:
 
         model.load_state_dict(model_dict, strict=False)
         model = model.to(cuda)
-        self.model = model.eval()
+        model.eval()
+        self.model = model
 
 
 _model_cached: dict[str, SynergyNetWrapper] = {}
@@ -77,6 +76,7 @@ def load_model(cuda: str):
         return _model_cached[cuda]
     model = SynergyNetWrapper(cuda)
 
+    print("blazeface: model loaded with %s." % (cuda,))
     _model_cached[cuda] = model
     return model
 
