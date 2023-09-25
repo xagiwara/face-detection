@@ -16,7 +16,7 @@ async def synergynet_process(
     img = cv2.imdecode(np.frombuffer(buffer, dtype=np.uint8), flags=cv2.IMREAD_COLOR)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    return synergynet(img, cuda, landmaraks=True, pose=True)
+    return synergynet([img], cuda, landmaraks=True, pose=True)
 
 
 @app.post("/synergynet/prepare")

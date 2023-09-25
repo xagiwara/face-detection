@@ -14,7 +14,7 @@ from PIL import Image
 from typing import Optional
 
 from env import DATA_SYNERGYNET
-from util import EulerAngle
+from util import EulerAngle, CropRect
 from .lib.params import ParamsPack
 
 __all__ = ["SynergyNetResult", "synergynet", "load_model"]
@@ -81,9 +81,15 @@ def load_model(cuda: str):
     return model
 
 
-def synergynet(img, cuda: str, landmaraks=False, vertices=False, pose=False):
+def synergynet_single(
+    img,
+    cuda: str,
+    original_rect: Optional[CropRect] = None,
+    landmaraks=False,
+    vertices=False,
+    pose=False,
+):
     model = load_model(cuda)
-    height, width = img.shape[:2]
 
     transform = transforms.Compose(
         [
@@ -99,5 +105,34 @@ def synergynet(img, cuda: str, landmaraks=False, vertices=False, pose=False):
         param = model.model.forward_test(input)
         param = param.squeeze().cpu().numpy().flatten().astype(np.float32)
 
-    roi_box = [0, 0, width, height, 0]
+    if original_rect is None:
+        height, width = img.shape[:2]
+        roi_box = [0, 0, width, height, 0]
+    else:
+        roi_box = [
+            original_rect.left,
+            original_rect.top,
+            original_rect.right,
+            original_rect.bottom,
+            0,
+        ]
     return SynergyNetResult(param, roi_box, landmaraks, vertices, pose)
+
+
+def synergynet(
+    images: list,
+    cuda: str,
+    original_rects: Optional[list[CropRect]] = None,
+    landmaraks=False,
+    vertices=False,
+    pose=False,
+):
+    if original_rects is None:
+        original_rects = [None for _ in images]
+
+    return [
+        synergynet_single(
+            images[i], cuda, original_rects[i], landmaraks, vertices, pose
+        )
+        for i in range(len(images))
+    ]
