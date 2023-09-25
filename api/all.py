@@ -35,6 +35,10 @@ async def all(
     faces = blazeface(img, blazeface_model, cuda)
     if face_limit is not None:
         faces = faces[:face_limit]
+
+    if len(faces) < 1:
+        return []
+
     cropped = [face.crop(img) for face in faces]
 
     hopenet_results = None
