@@ -8,17 +8,7 @@ from torch.autograd import Variable
 from PIL import Image
 from lib.hopenet.code.hopenet import Hopenet
 from env import DATA_HOPENET
-
-
-class HopenetResult:
-    roll: float
-    pitch: float
-    yaw: float
-
-    def __init__(self, roll: float, pitch: float, yaw: float) -> None:
-        self.roll = roll
-        self.pitch = pitch
-        self.yaw = yaw
+from util import EulerAngle
 
 
 _model_cached: dict[str, Hopenet] = {}
@@ -82,7 +72,7 @@ def hopenet_single(image, model: str, cuda: str):
         torch.sum(roll_predicted.data[0] * idx_tensor).cpu().item() * 3 - 99
     )
 
-    return HopenetResult(roll_predicted, pitch_predicted, yaw_predicted)
+    return EulerAngle(roll_predicted, pitch_predicted, yaw_predicted)
 
 
 def hopenet(images: list, model: str, cuda: str):

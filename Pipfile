@@ -19,6 +19,7 @@ python-multipart = "*"
 opencv-python = "*"
 pillow = "*"
 timm = "*"
+scipy = "*"
 
 [dev-packages]
 black = "*"

@@ -3,9 +3,15 @@
 *.npy
 *.pkl
 *.pt
+*.tar
+*.mat
+*.list.train
 
 lib/blazeface/*.png
 lib/hopenet/*.gif
 lib/hsemotion/**/*.jpg
+lib/synergynet/**/*.png
+lib/synergynet/**/*.gif
+lib/synergynet/**/*.jpg
 
 .env

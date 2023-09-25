@@ -3,25 +3,25 @@ from math import floor, ceil
 import cv2
 from env import DATA_BLAZEFACE
 from lib.blazeface.blazeface import BlazeFace
+from util import CropRect
 
 _model_cached: dict[str, BlazeFace] = {}
 
 
-class BlazeFaceResult:
-    top: float
-    left: float
-    bottom: float
-    right: float
+class BlazeFaceResult(CropRect):
     keypoints: list[list[float]]
     confidence: float
 
     def __init__(
         self, result: list[float], size: float, xoffset: float, yoffset: float
     ) -> None:
-        self.top = result[0] * size - yoffset
-        self.left = result[1] * size - xoffset
-        self.bottom = result[2] * size - yoffset
-        self.right = result[3] * size - xoffset
+        super().__init__(
+            result[0] * size - yoffset,
+            result[1] * size - xoffset,
+            result[2] * size - yoffset,
+            result[3] * size - xoffset,
+        )
+
         self.keypoints = (
             [
                 [
