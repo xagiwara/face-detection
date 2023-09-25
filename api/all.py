@@ -1,148 +1,62 @@
-from math import floor, ceil
 from typing import Optional
 from fastapi import UploadFile, Query
-from torchvision import transforms
-import torch
-import torch.nn.functional as F
-from torch.autograd import Variable
 import cv2
 import numpy as np
-from PIL import Image
 from .app import app
-from .hopenet import hopenet_models, load_model as load_hopenet_model
-from .blazeface import load_model as load_blazeface_model
-from .hsemotion import hsemotion_models, hsemotion
+from models.hopenet import hopenet, models as hopenet_models
+from models.blazeface import blazeface, models as blazeface_models
+from models.hsemotion import hsemotion, models as hsemotion_models
 from .devices import cuda_devices
 
-@app.post('/models')
+
+@app.post("/models")
 async def models():
     return {
-        'blazeface': ['front', 'back'],
-        'hopenet': hopenet_models(),
-        'hsemotion': hsemotion_models(),
+        "blazeface": blazeface_models(),
+        "hopenet": hopenet_models(),
+        "hsemotion": hsemotion_models(),
     }
 
-@app.post('/')
+
+@app.post("/")
 async def all(
-        file: UploadFile,
-        cuda: str = Query('cpu', enum=cuda_devices()),
-        blazeface_model: str = Query('front', enum=['front', 'back']),
-        hopenet_model: str = Query(hopenet_models()[0], enum=hopenet_models()),
-        hsemotion_model: Optional[str] = Query(None, enum=hsemotion_models()),
-        face_limit: Optional[int] = None):
-
-    blazeface = load_blazeface_model(blazeface_model, cuda)
-    hopenet = load_hopenet_model(hopenet_model, cuda)
-
-    img = cv2.imdecode(np.frombuffer(await file.read(), dtype=np.uint8), flags=cv2.IMREAD_COLOR)
+    file: UploadFile,
+    cuda: str = Query("cpu", enum=cuda_devices()),
+    blazeface_model: str = Query(blazeface_models()[0], enum=blazeface_models()),
+    hopenet_model: Optional[str] = Query(None, enum=hopenet_models()),
+    hsemotion_model: Optional[str] = Query(None, enum=hsemotion_models()),
+    face_limit: Optional[int] = None,
+):
+    img = cv2.imdecode(
+        np.frombuffer(await file.read(), dtype=np.uint8), flags=cv2.IMREAD_COLOR
+    )
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    height, width = img.shape[:2]
-    size = max(height, width)
-    top = int((size - height) / 2)
-    left = int((size - width) / 2)
-    img_padded = cv2.copyMakeBorder(img, top, size - height - top, left, size - width - left, cv2.BORDER_CONSTANT, (0, 0, 0))
-
-    if blazeface_model == 'front':
-        img_blazeface = cv2.resize(img_padded, (128, 128))
-
-    if blazeface_model == 'back':
-        img_blazeface = cv2.resize(img_padded, (256, 256))
-
-    detections = blazeface.predict_on_image(img_blazeface)
-    detections = detections.cpu().numpy()
-
-    if len(detections) < 1:
-        return []
-
+    faces = blazeface(img, blazeface_model, cuda)
     if face_limit is not None:
-        detections = detections[0:face_limit]
+        faces = faces[:face_limit]
+    cropped = [face.crop(img) for face in faces]
 
-    faces = [
-        {
-            'top': face[0] * size - top,
-            'left': face[1] * size - left,
-            'bottom': face[2] * size - top,
-            'right': face[3] * size - left,
-            'keypoints': [[
-                face[i * 2 + 4] * size - left,
-                face[i * 2 + 5] * size - top,
-            ] for i in range(6)],
-            'confidence': float(face[16]),
-        }
-        for face
-        in detections
-    ]
-
-    idx_tensor = [idx for idx in range(66)]
-    idx_tensor = torch.FloatTensor(idx_tensor).to(cuda)
-
-    transformations = transforms.Compose([transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
-
-    def _crop_face (face):
-        face_top = floor(face['top'])
-        face_left = floor(face['left'])
-        face_bottom = ceil(face['bottom'])
-        face_right = ceil(face['right'])
-
-        img_cropped = img
-
-        if face_bottom > size or face_right > size:
-            img_cropped = cv2.copyMakeBorder(img_cropped, 0, max(face_bottom - size, 0), 0, max(face_right - size, 0), cv2.BORDER_CONSTANT, (0, 0, 0))
-
-        if face_top < 0:
-            img_cropped = cv2.copyMakeBorder(img_cropped, -face_top, 0, 0, 0, cv2.BORDER_CONSTANT, (0, 0, 0))
-            face_top = 0
-            face_bottom += -face_top
-
-        if face_left < 0:
-            img_cropped = cv2.copyMakeBorder(img_cropped, 0, 0, -face_left, 0, cv2.BORDER_CONSTANT, (0, 0, 0))
-            face_left = 0
-            face_right += -face_left
-
-        return img_cropped[face_top:face_bottom,face_left:face_right]
-
-    cropped_imgs = [_crop_face(face) for face in faces]
+    hopenet_results = None
+    if hopenet_model is not None:
+        hopenet_results = hopenet(cropped, hopenet_model, cuda)
 
     hsemotion_results = None
     if hsemotion_model is not None:
-        hsemotion_results = hsemotion(cropped_imgs, hsemotion_model, cuda)
+        hsemotion_results = hsemotion(cropped, hsemotion_model, cuda)
 
-    hopenet_results = []
-    for img_hopenet in cropped_imgs:
-        img_hopenet = cv2.resize(img_hopenet, (224, 224))
-        img_hopenet = Image.fromarray(img_hopenet)
-
-        img_hopenet = transformations(img_hopenet)
-        img_hopenet = img_hopenet.view(1, 3, 224, 224)
-        img_hopenet = Variable(img_hopenet).to(cuda)
-
-        yaw, pitch, roll = hopenet(img_hopenet)
-
-        yaw_predicted = F.softmax(yaw, dim=1)
-        pitch_predicted = F.softmax(pitch, dim=1)
-        roll_predicted = F.softmax(roll, dim=1)
-
-        yaw_predicted = torch.sum(yaw_predicted.data[0] * idx_tensor).cpu().item() * 3 - 99
-        pitch_predicted = torch.sum(pitch_predicted.data[0] * idx_tensor).cpu().item() * 3 - 99
-        roll_predicted = torch.sum(roll_predicted.data[0] * idx_tensor).cpu().item() * 3 - 99
-
-        hopenet_results += [{
-            'roll': roll_predicted,
-            'pitch': pitch_predicted,
-            'yaw': yaw_predicted,
-        }]
-
-    def _item (i: int):
+    def _item(i: int):
         data = {
-            'blazeface': faces[i],
-            'hopenet': hopenet_results[i],
+            "blazeface": faces[i],
         }
+
+        if hopenet_results is not None:
+            data["hopenet"] = hopenet_results[i]
         if hsemotion_results is not None:
-            data['hsemotion'] = hsemotion_results[i]
+            data["hsemotion"] = hsemotion_results[i]
         return data
 
     return [_item(i) for i in range(len(faces))]
+
 
 __all__ = []
