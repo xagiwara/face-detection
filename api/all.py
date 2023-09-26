@@ -72,8 +72,8 @@ async def all(
         )
 
     face_alignment_results = None
-    if face_alignment is not None:
-        face_alignment_results = face_alignment_run([img], cuda, [faces])
+    if face_alignment:
+        face_alignment_results = face_alignment_run([img], cuda, [faces])[0]
 
     def _item(i: int):
         data = {
