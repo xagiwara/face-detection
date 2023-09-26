@@ -6,6 +6,7 @@
 *.tar
 *.mat
 *.list.train
+*.zip
 
 lib/blazeface/*.png
 lib/hopenet/*.gif

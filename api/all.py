@@ -7,6 +7,7 @@ from models.hopenet import hopenet, models as hopenet_models
 from models.blazeface import blazeface, models as blazeface_models
 from models.hsemotion import hsemotion, models as hsemotion_models
 from models.synergynet import synergynet, models as synergynet_models
+from models.fece_alignment import face_alignment as face_alignment_run
 from .devices import cuda_devices
 
 
@@ -32,6 +33,7 @@ async def all(
     synergynet_landmarks: bool = False,
     synergynet_vertices: bool = False,
     synergynet_pose: bool = False,
+    face_alignment: bool = False,
 ):
     img = cv2.imdecode(
         np.frombuffer(await file.read(), dtype=np.uint8), flags=cv2.IMREAD_COLOR
@@ -69,6 +71,10 @@ async def all(
             pose=synergynet_pose,
         )
 
+    face_alignment_results = None
+    if face_alignment is not None:
+        face_alignment_results = face_alignment_run([img], cuda, [faces])
+
     def _item(i: int):
         data = {
             "blazeface": faces[i],
@@ -80,6 +86,8 @@ async def all(
             data["hsemotion"] = hsemotion_results[i]
         if synergynet_results is not None:
             data["synergynet"] = synergynet_results[i]
+        if face_alignment_results is not None:
+            data["face_alignment"] = face_alignment_results[i]
         return data
 
     return [_item(i) for i in range(len(faces))]
