@@ -6,7 +6,7 @@ from .app import app
 from models.hopenet import hopenet, models as hopenet_models
 from models.blazeface import blazeface, models as blazeface_models
 from models.hsemotion import hsemotion, models as hsemotion_models
-from models.synergynet import synergynet
+from models.synergynet import synergynet, models as synergynet_models
 from .devices import cuda_devices
 
 
@@ -16,6 +16,7 @@ async def models():
         "blazeface": blazeface_models(),
         "hopenet": hopenet_models(),
         "hsemotion": hsemotion_models(),
+        "synergynet": synergynet_models(),
     }
 
 
@@ -27,6 +28,7 @@ async def all(
     blazeface_model: str = Query(blazeface_models()[0], enum=blazeface_models()),
     hopenet_model: Optional[str] = Query(None, enum=hopenet_models()),
     hsemotion_model: Optional[str] = Query(None, enum=hsemotion_models()),
+    synergynet_model: Optional[str] = Query(None, enum=synergynet_models()),
     synergynet_landmarks: bool = False,
     synergynet_vertices: bool = False,
     synergynet_pose: bool = False,
@@ -54,9 +56,15 @@ async def all(
         hsemotion_results = hsemotion(cropped, hsemotion_model, cuda)
 
     synergynet_results = None
-    if synergynet_landmarks or synergynet_vertices or synergynet_pose:
+    if (
+        hsemotion_model is not None
+        and synergynet_landmarks
+        or synergynet_vertices
+        or synergynet_pose
+    ):
         synergynet_results = synergynet(
             cropped,
+            hsemotion_model,
             cuda,
             faces,
             landmaraks=synergynet_landmarks,

@@ -17,7 +17,7 @@ from env import DATA_SYNERGYNET
 from util import EulerAngle, CropRect
 from .lib.params import ParamsPack
 
-__all__ = ["SynergyNetResult", "synergynet", "load_model"]
+__all__ = ["SynergyNetResult", "synergynet", "load_model", "models"]
 
 
 class SynergyNetResult:
@@ -44,14 +44,14 @@ class SynergyNetResult:
 
 
 class SynergyNetWrapper:
-    def __init__(self, cuda: str) -> None:
+    def __init__(self, model: str, cuda: str) -> None:
         checkpoint = torch.load(
             path.join(DATA_SYNERGYNET, "best.pth.tar"),
-            map_location=lambda storage, loc: storage,
+            map_location=cuda,
         )["state_dict"]
 
         args = Namespace()
-        args.arch = "mobilenet_v2"
+        args.arch = model
         args.img_size = 120
 
         model = SynergyNet(args)
@@ -70,26 +70,33 @@ class SynergyNetWrapper:
 _model_cached: dict[str, SynergyNetWrapper] = {}
 
 
-def load_model(cuda: str):
+def load_model(model_name: str, cuda: str):
     ParamsPack().load()
-    if cuda in _model_cached:
-        return _model_cached[cuda]
-    model = SynergyNetWrapper(cuda)
+    key = "%s/%s" % (model_name, cuda)
 
-    print("blazeface: model loaded with %s." % (cuda,))
-    _model_cached[cuda] = model
+    if key in _model_cached:
+        return _model_cached[key]
+    model = SynergyNetWrapper(model_name, cuda)
+
+    print("synergynet: %s model loaded with %s." % (model_name, cuda))
+    _model_cached[key] = model
     return model
+
+
+def models():
+    return ["mobilenet_v2", "mobilenet", "resnet", "ghostnet", "resnest"]
 
 
 def synergynet_single(
     img,
+    model_name: str,
     cuda: str,
     original_rect: Optional[CropRect] = None,
     landmaraks=False,
     vertices=False,
     pose=False,
 ):
-    model = load_model(cuda)
+    model = load_model(model_name, cuda)
 
     transform = transforms.Compose(
         [
@@ -121,6 +128,7 @@ def synergynet_single(
 
 def synergynet(
     images: list,
+    model_name: str,
     cuda: str,
     original_rects: Optional[list[CropRect]] = None,
     landmaraks=False,
@@ -132,7 +140,7 @@ def synergynet(
 
     return [
         synergynet_single(
-            images[i], cuda, original_rects[i], landmaraks, vertices, pose
+            images[i], model_name, cuda, original_rects[i], landmaraks, vertices, pose
         )
         for i in range(len(images))
     ]
