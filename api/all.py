@@ -57,14 +57,14 @@ async def all(
 
     synergynet_results = None
     if (
-        hsemotion_model is not None
+        synergynet_model is not None
         and synergynet_landmarks
         or synergynet_vertices
         or synergynet_pose
     ):
         synergynet_results = synergynet(
             cropped,
-            hsemotion_model,
+            synergynet_model,
             cuda,
             faces,
             landmaraks=synergynet_landmarks,

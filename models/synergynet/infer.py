@@ -84,7 +84,13 @@ def load_model(model_name: str, cuda: str):
 
 
 def models():
-    return ["mobilenet_v2", "mobilenet", "resnet", "ghostnet", "resnest"]
+    return [
+        "mobilenet_v2",
+        # "mobilenet",
+        # "resnet",
+        # "ghostnet",
+        "resnest",
+    ]
 
 
 def synergynet_single(
