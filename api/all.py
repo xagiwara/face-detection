@@ -56,11 +56,8 @@ async def all(
         hsemotion_results = hsemotion(cropped, hsemotion_model, cuda)
 
     synergynet_results = None
-    if (
-        synergynet_model is not None
-        and synergynet_landmarks
-        or synergynet_vertices
-        or synergynet_pose
+    if synergynet_model is not None and (
+        synergynet_landmarks or synergynet_vertices or synergynet_pose
     ):
         synergynet_results = synergynet(
             cropped,
