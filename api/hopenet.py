@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from .app import app
 from .devices import cuda_devices
-from models.hopenet import models, hopenet, load_model
+from models.hopenet import models, hopenet_single, load_model
 
 
 @app.get("/hopenet/models")
@@ -21,7 +21,7 @@ async def hopenet_process(
     buffer = await file.read()
     img = cv2.imdecode(np.frombuffer(buffer, dtype=np.uint8), flags=cv2.IMREAD_COLOR)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    return hopenet(img, model, cuda)
+    return hopenet_single(img, model, cuda)
 
 
 @app.post("/hopenet/prepare")
