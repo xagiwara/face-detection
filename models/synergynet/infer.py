@@ -17,13 +17,19 @@ from env import DATA_SYNERGYNET
 from util import EulerAngle, CropRect
 from .lib.params import ParamsPack
 
-__all__ = ["SynergyNetResult", "synergynet", "load_model", "models"]
+__all__ = [
+    "SynergyNetResult",
+    "synergynet",
+    "synergynet_single",
+    "load_model",
+    "models",
+]
 
 
 class SynergyNetResult:
     landmarks: Optional[list[list[float]]]
     vertices: Optional[list[list[float]]]
-    angle: Optional[EulerAngle]
+    pose: Optional[EulerAngle]
     translation: Optional[list[float]]
 
     def __init__(
@@ -38,8 +44,8 @@ class SynergyNetResult:
             self.vertices = [[data[0][i], data[1][i], data[2][i]] for i in range(53215)]
 
         if pose:
-            angle, translation = predict_pose(param, roi_box)
-            self.angle = EulerAngle(angle[2], angle[1], angle[0])
+            pose, translation = predict_pose(param, roi_box)
+            self.pose = EulerAngle(pose[2], pose[1], pose[0])
             self.translation = [translation[0], translation[1], translation[2]]
 
 
