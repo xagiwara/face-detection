@@ -16,6 +16,7 @@ from typing import Optional
 from env import DATA_SYNERGYNET
 from util import EulerAngle, CropRect
 from .lib.params import ParamsPack
+import cv2
 
 __all__ = [
     "SynergyNetResult",
@@ -110,15 +111,12 @@ def synergynet_single(
 ):
     model = load_model(model_name, cuda)
 
-    transform = transforms.Compose(
-        [
-            transforms.Resize((120, 120)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=127.5, std=128),
-        ]
-    )
+    input = cv2.resize(img, dsize=(120, 120), interpolation=cv2.INTER_LANCZOS4)
+    input = torch.from_numpy(input)
+    input = (input - 127.5) / 128.0
+    input = input.permute(2, 0, 1)
+    input = input.unsqueeze(0)
 
-    input = transform(Image.fromarray(img)).unsqueeze(0)
     with torch.no_grad():
         input = input.to(cuda)
         param = model.model.forward_test(input)
