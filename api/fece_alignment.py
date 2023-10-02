@@ -4,7 +4,7 @@ from fastapi import UploadFile, Query
 from .devices import cuda_devices
 import cv2
 import numpy as np
-from models.fece_alignment import load_model, face_alignment
+from models.fece_alignment import load_model, face_alignment_single
 
 __all__ = []
 
@@ -18,7 +18,7 @@ async def face_alignment_process(
     img = cv2.imdecode(np.frombuffer(buffer, dtype=np.uint8), flags=cv2.IMREAD_COLOR)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    return face_alignment([img], cuda)
+    return face_alignment_single(img, cuda)
 
 
 @app.post("/face-alignment/prepare")

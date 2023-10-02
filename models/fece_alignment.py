@@ -25,7 +25,7 @@ def face_alignment_single(image, cuda: str, faces: Optional[list[CropRect]] = No
     _faces = faces
     if faces is None:
         height, width = image.shape[:2]
-        _faces = [0, 0, width, height]
+        _faces = [CropRect(0, 0, height, width)]
     result = model.get_landmarks_from_image(
         image, [[face.left, face.top, face.right, face.bottom] for face in _faces]
     )
