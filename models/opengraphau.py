@@ -5,9 +5,9 @@ from torchvision import transforms
 import torch
 import numpy as np
 
-from lib.OpenGraphAU.model import swin_transformer, resnet
-from lib.OpenGraphAU.model.MEFL import MEFARG
-from lib.OpenGraphAU.utils import load_state_dict
+from lib.me_graphau.OpenGraphAU.model import swin_transformer, resnet
+from lib.me_graphau.OpenGraphAU.model.MEFL import MEFARG
+from lib.me_graphau.OpenGraphAU.utils import load_state_dict
 from env import DATA_SWIN, DATA_OPENGRAPHAU, DATA_RESNET
 
 __all__ = ["load_model", "opengraphau", "opengraphau_single", "AU_ids", "AU_names"]
