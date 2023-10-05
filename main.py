@@ -1,3 +1,8 @@
+import sys
+import os
+
+sys.path.append(os.path.join(os.path.dirname(__file__)))
+
 import uvicorn
 from os import makedirs, path
 from socket import AF_INET, AF_INET6, SOCK_STREAM, socket
