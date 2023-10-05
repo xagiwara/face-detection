@@ -1,8 +1,3 @@
-import sys
-import os
-
-sys.path.append(os.path.join(os.path.dirname(__file__)))
-
 import uvicorn
 from os import makedirs, path
 from socket import AF_INET, AF_INET6, SOCK_STREAM, socket
@@ -16,8 +11,11 @@ def main(
     port: int = 0,
     ipv6: bool = False,
     portfile: Optional[str] = None,
+    access_log: bool = False,
 ):
-    server = uvicorn.Server(config=uvicorn.Config(app, reload=True))
+    server = uvicorn.Server(
+        config=uvicorn.Config(app, reload=True, access_log=access_log)
+    )
 
     s = socket(AF_INET6 if ipv6 else AF_INET, SOCK_STREAM)
     s.bind((host or ("::1" if ipv6 else "127.0.0.1"), port))
@@ -42,5 +40,8 @@ if __name__ == "__main__":
     parser.add_argument("--host", type=str)
     parser.add_argument("--portfile", type=str)
     parser.add_argument("--ipv6", action=argparse.BooleanOptionalAction, default=False)
-    args = parser.parse_args()
-    main(args.host, args.port, args.ipv6, args.portfile)
+    parser.add_argument(
+        "--access-log", action=argparse.BooleanOptionalAction, default=False
+    )
+    args = vars(parser.parse_args())
+    main(**args)
