@@ -14,5 +14,9 @@ lib/hsemotion/**/*.jpg
 lib/synergynet/**/*.png
 lib/synergynet/**/*.gif
 lib/synergynet/**/*.jpg
+lib/me_graphau/data
+lib/me_graphau/**/*.png
+lib/me_graphau/**/*.jpg
+
 
 .env
