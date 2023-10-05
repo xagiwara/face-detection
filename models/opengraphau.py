@@ -5,16 +5,17 @@ from torchvision import transforms
 import torch
 import numpy as np
 
-from lib.OpenGraphAU.model import swin_transformer
-from lib.OpenGraphAU.model.ANFL import MEFARG
+from lib.OpenGraphAU.model import swin_transformer, resnet
+from lib.OpenGraphAU.model.MEFL import MEFARG
 from lib.OpenGraphAU.utils import load_state_dict
-from env import DATA_SWIN, DATA_OPENGRAPHAU
+from env import DATA_SWIN, DATA_OPENGRAPHAU, DATA_RESNET
 
 __all__ = ["load_model", "opengraphau", "opengraphau_single", "AU_ids", "AU_names"]
 
 model_cached: dict[str, MEFARG] = {}
 
 swin_transformer.models_dir = path.realpath(DATA_SWIN)
+resnet.models_dir = path.realpath(DATA_RESNET)
 
 
 def models():
@@ -34,6 +35,12 @@ def load_model(model_name: str, device: str):
     backbone = None
     if "SwinS" in model_name:
         backbone = "swin_transformer_small"
+    if "SwinT" in model_name:
+        backbone = "swin_transformer_tiny"
+    if "SwinB" in model_name:
+        backbone = "swin_transformer_base"
+    if "ResNet50" in model_name:
+        backbone = "resnet50"
 
     model = MEFARG(backbone=backbone)
     model = load_state_dict(
