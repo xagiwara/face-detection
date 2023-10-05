@@ -14,6 +14,7 @@ from .hopenet import *
 from .hsemotion import *
 from .synergynet import *
 from .fece_alignment import *
+from .opengraphau import *
 
 __all__ = [
     "app",
