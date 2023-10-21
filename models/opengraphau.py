@@ -6,13 +6,14 @@ import torch
 import numpy as np
 
 from lib.me_graphau.OpenGraphAU.model import swin_transformer, resnet
-from lib.me_graphau.OpenGraphAU.model.MEFL import MEFARG
+from lib.me_graphau.OpenGraphAU.model.ANFL import MEFARG as MEFARG_Stage1
+from lib.me_graphau.OpenGraphAU.model.MEFL import MEFARG as MEFARG_Stage2
 from lib.me_graphau.OpenGraphAU.utils import load_state_dict
 from env import DATA_SWIN, DATA_OPENGRAPHAU, DATA_RESNET
 
 __all__ = ["load_model", "opengraphau", "opengraphau_single", "AU_ids", "AU_names"]
 
-model_cached: dict[str, MEFARG] = {}
+model_cached: dict[str, MEFARG_Stage1 | MEFARG_Stage2] = {}
 
 swin_transformer.models_dir = path.realpath(DATA_SWIN)
 resnet.models_dir = path.realpath(DATA_RESNET)
@@ -42,7 +43,11 @@ def load_model(model_name: str, device: str):
     if "ResNet50" in model_name:
         backbone = "resnet50"
 
-    model = MEFARG(backbone=backbone)
+    if "first_stage" in model_name:
+        model = MEFARG_Stage1(backbone=backbone)
+    if "second_stage" in model_name:
+        model = MEFARG_Stage2(backbone=backbone)
+
     model = load_state_dict(
         model,
         path.realpath(path.join(DATA_OPENGRAPHAU, model_name)),
