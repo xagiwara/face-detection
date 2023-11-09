@@ -21,7 +21,7 @@ def load_model(model_name: str, device: str):
         return _model_cached[key]
 
     model = Hopenet(Bottleneck, [3, 4, 6, 3], 66)
-    model.load_state_dict(torch.load(path.join(DATA_HOPENET, model_name)))
+    model.load_state_dict(torch.load(path.join(DATA_HOPENET, model_name), map_location=torch.device('cpu')))
     model.to(device)
     model.eval()
 
