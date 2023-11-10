@@ -125,6 +125,37 @@ def blazeface(image, model_name: str, device: str):
     return [BlazeFaceResult(face, size, left, top) for face in detections]
 
 
+def blazeface_prepare_image(image, model_name):
+    height, width = image.shape[:2]
+    size = max(height, width)
+    top = int((size - height) / 2)
+    left = int((size - width) / 2)
+
+    image = cv2.copyMakeBorder(
+        image,
+        top,
+        size - height - top,
+        left,
+        size - width - left,
+        cv2.BORDER_CONSTANT,
+        (0, 0, 0),
+    )
+
+    if model_name == "front":
+        image = cv2.resize(image, (128, 128))
+
+    if model_name == "back":
+        image = cv2.resize(image, (256, 256))
+
+    return image, size, left, top
+
+
+def blazeface_batch(images, model_name, device):
+    model = load_model(model_name, device)
+    detections = model.predict_on_batch(images)
+    return [detection.cpu().numpy() for detection in detections]
+
+
 __all__ = [
     "models",
     "load_model",
