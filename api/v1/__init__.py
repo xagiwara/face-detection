@@ -7,6 +7,8 @@ sys.path.append(
 
 from .app import router
 from .blazeface import *
+from .cuda import *
+from .hopenet import *
 
 __all__ = [
     "router",

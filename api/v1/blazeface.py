@@ -1,23 +1,25 @@
 from .app import app
 from fastapi import UploadFile, Query
-from fastapi.responses import JSONResponse, Response
 import numpy as np
 import cv2
-from time import perf_counter
 from util.cuda import cuda_devices
 from models.blazeface import (
-    load_model,
     blazeface,
-    models,
     blazeface_batch,
     blazeface_prepare_image,
+    blazeface_image_size,
     BlazeFaceResult,
 )
+from .interfaces.face import BlazeFaceResultModel
 
 __all__ = []
 
 
-@app.post("/blazeface", tags=["Face Detection"])
+@app.post(
+    "/blazeface",
+    tags=["Face Detection"],
+    response_model=dict[str, list[BlazeFaceResultModel]],
+)
 async def _(
     files: list[UploadFile],
     cuda: str = Query("cpu", enum=cuda_devices()),
@@ -52,3 +54,13 @@ async def _(
         ]
         for file in range(len(images))
     }
+
+
+@app.post("/blazeface/prepare", tags=["Face Detection"])
+async def _(
+    cuda: str = Query("cpu", enum=cuda_devices()),
+    model: str = Query("front", enum=["front", "back"]),
+):
+    image = np.zeros((*blazeface_image_size(model), 3), dtype=np.float32)
+    blazeface(image, model, cuda)
+    return {"ok": True}

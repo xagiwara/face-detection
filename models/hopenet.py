@@ -21,7 +21,11 @@ def load_model(model_name: str, device: str):
         return _model_cached[key]
 
     model = Hopenet(Bottleneck, [3, 4, 6, 3], 66)
-    model.load_state_dict(torch.load(path.join(DATA_HOPENET, model_name), map_location=torch.device('cpu')))
+    model.load_state_dict(
+        torch.load(
+            path.join(DATA_HOPENET, model_name), map_location=torch.device("cpu")
+        )
+    )
     model.to(device)
     model.eval()
 
@@ -39,6 +43,10 @@ def models():
 
 
 def hopenet_single(image, model: str, cuda: str):
+    return hopenet([image], model, cuda)[0]
+
+
+def hopenet(images: list, model: str, cuda: str):
     model = load_model(model, cuda)
 
     idx_tensor = [idx for idx in range(66)]
@@ -52,28 +60,27 @@ def hopenet_single(image, model: str, cuda: str):
         ]
     )
 
-    image = Image.fromarray(image)
-    image = transformations(image)
-    img_shape = image.size()
-    image = image.view(1, img_shape[0], img_shape[1], img_shape[2])
-    image = Variable(image).to(cuda)
+    images = [transformations(Image.fromarray(image)) for image in images]
 
-    yaw, pitch, roll = model(image)
+    images = Variable(torch.stack(images)).to(cuda)
 
-    yaw_predicted = F.softmax(yaw, dim=1)
-    pitch_predicted = F.softmax(pitch, dim=1)
-    roll_predicted = F.softmax(roll, dim=1)
+    yaw, pitch, roll = model(images)
 
-    yaw_predicted = torch.sum(yaw_predicted.data[0] * idx_tensor).cpu().item() * 3 - 99
+    yaw_predicted = F.softmax(yaw, dim=1) * idx_tensor
+    pitch_predicted = F.softmax(pitch, dim=1) * idx_tensor
+    roll_predicted = F.softmax(roll, dim=1) * idx_tensor
+
+    yaw_predicted = (
+        torch.sum(yaw_predicted, dim=1).cpu().detach().numpy() * 3 - 99
+    ).astype(float)
     pitch_predicted = (
-        torch.sum(pitch_predicted.data[0] * idx_tensor).cpu().item() * 3 - 99
-    )
+        torch.sum(pitch_predicted, dim=1).cpu().detach().numpy() * 3 - 99
+    ).astype(float)
     roll_predicted = (
-        torch.sum(roll_predicted.data[0] * idx_tensor).cpu().item() * 3 - 99
-    )
+        torch.sum(roll_predicted, dim=1).cpu().detach().numpy() * 3 - 99
+    ).astype(float)
 
-    return EulerAngle(roll_predicted, pitch_predicted, yaw_predicted)
-
-
-def hopenet(images: list, model: str, cuda: str):
-    return [hopenet_single(image, model, cuda) for image in images]
+    return [
+        EulerAngle(roll_predicted[i], pitch_predicted[i], yaw_predicted[i])
+        for i in range(len(images))
+    ]

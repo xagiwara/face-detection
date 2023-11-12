@@ -4,6 +4,7 @@ import cv2
 from env import DATA_BLAZEFACE
 from lib.blazeface.blazeface import BlazeFace
 from util import CropRect
+from typing import Literal
 
 _model_cached: dict[str, BlazeFace] = {}
 
@@ -93,28 +94,18 @@ def load_model(model: str, device: str):
     return blazeface
 
 
+def blazeface_image_size(
+    model_name: str,
+) -> tuple[Literal[128, 256], Literal[128, 256]]:
+    if model_name == "front":
+        return (128, 128)
+    if model_name == "back":
+        return (256, 256)
+
+
 def blazeface(image, model_name: str, device: str):
     model = load_model(model_name, device)
-    height, width = image.shape[:2]
-    size = max(height, width)
-    top = int((size - height) / 2)
-    left = int((size - width) / 2)
-
-    image = cv2.copyMakeBorder(
-        image,
-        top,
-        size - height - top,
-        left,
-        size - width - left,
-        cv2.BORDER_CONSTANT,
-        (0, 0, 0),
-    )
-
-    if model_name == "front":
-        image = cv2.resize(image, (128, 128))
-
-    if model_name == "back":
-        image = cv2.resize(image, (256, 256))
+    image, size, left, top = blazeface_prepare_image(image, model_name)
 
     # front_net.min_score_thresh = 0.75
     # front_net.min_suppression_threshold = 0.3
@@ -127,27 +118,30 @@ def blazeface(image, model_name: str, device: str):
 
 def blazeface_prepare_image(image, model_name):
     height, width = image.shape[:2]
-    size = max(height, width)
-    top = int((size - height) / 2)
-    left = int((size - width) / 2)
+    height_t, width_t = blazeface_image_size(model_name)
+    if height != height_t or width != width_t:
+        size: int = max(height, width)
+        top = int((size - height) / 2)
+        left = int((size - width) / 2)
 
-    image = cv2.copyMakeBorder(
-        image,
-        top,
-        size - height - top,
-        left,
-        size - width - left,
-        cv2.BORDER_CONSTANT,
-        (0, 0, 0),
-    )
+        image = cv2.copyMakeBorder(
+            image,
+            top,
+            size - height - top,
+            left,
+            size - width - left,
+            cv2.BORDER_CONSTANT,
+            (0, 0, 0),
+        )
 
-    if model_name == "front":
-        image = cv2.resize(image, (128, 128))
+        if model_name == "front":
+            image = cv2.resize(image, (128, 128))
 
-    if model_name == "back":
-        image = cv2.resize(image, (256, 256))
+        if model_name == "back":
+            image = cv2.resize(image, (256, 256))
 
-    return image, size, left, top
+        return image, size, left, top
+    return image, height_t, 0, 0
 
 
 def blazeface_batch(images, model_name, device):
